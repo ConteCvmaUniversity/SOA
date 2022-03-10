@@ -16,17 +16,17 @@ typedef struct _klist
     struct mutex op_mtx;
     klist_elem* head;
     klist_elem* tail;
-
+    unsigned int len;
 
 }klist;
 
 /*Function*/
 
-extern klist klist_alloc(void);
+extern klist* klist_alloc(void);
 extern void klist_free(klist*);
-extern unsigned int klist_put(klist*,const char*,int);
-extern unsigned int klist_get(klist*,char*,int);
+extern unsigned int klist_put(klist*,char*,unsigned int);
+extern unsigned int klist_get(klist*,char*,unsigned int);
 extern unsigned int klist_len(klist*);
 
-klist_elem klist_elem_alloc(char*,int);
+klist_elem* klist_elem_alloc(char*,int);
 void klist_elem_free(klist_elem*);
