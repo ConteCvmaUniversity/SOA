@@ -35,23 +35,19 @@ unsigned int klist_put(klist* list,char* buffer,unsigned int size){
         return -ENOMEM;
     
     mutex_lock(&(list->op_mtx));
-    if (list->head == NULL)
+
+    if (list->tail != NULL)
+    {
+        list->tail->next=elem;
+        list->tail = elem;
+    }else
     {
         //no element in list
         list->head = elem;
-        
-    }else if (list->tail == NULL)
-    {
-        //only an element
-        list->head->next = elem;
-        list->tail = elem;
-
-    }else
-    {
-       // there are alement in list
-        list->tail->next = elem;
         list->tail = elem;
     }
+    
+
     list->len += size;
     mutex_unlock(&(list->op_mtx));
     return size;
@@ -70,11 +66,17 @@ unsigned int klist_get(klist* list,char* buffer,unsigned int size){
         elem = list->head;
         byte_to_read = total - remaining;
         
-        if (byte_to_read < elem->size)
+        if (byte_to_read < (elem->size-elem->last_read))
         {
             //no del haed
-            memcpy(buffer+remaining, elem->buffer ,byte_to_read);
+            memcpy(buffer+remaining, elem->buffer+elem->last_read ,byte_to_read);
+            elem->last_read += byte_to_read;
             remaining += byte_to_read; 
+            if (elem->last_read >= elem->size)
+            {
+                remove_head(list);
+            }
+            
         }else
         {
             //read all elem->buffer and remove head
@@ -83,6 +85,7 @@ unsigned int klist_get(klist* list,char* buffer,unsigned int size){
             remaining += elem->size;
         }
     }
+    list->len -= total;
     mutex_unlock(&(list->op_mtx));
     return total;
 }
@@ -93,6 +96,10 @@ void remove_head(klist* list){
     klist_elem* elem;
     elem = list->head;
     list->head = elem->next;
+    if (list->head == NULL)
+    {
+        list->tail = NULL;
+    }
     klist_elem_free(elem);
     return;
 }

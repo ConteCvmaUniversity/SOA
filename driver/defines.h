@@ -9,7 +9,7 @@
 #include <linux/tty.h>
 #include <linux/version.h>
 
-#include "kfifo.h"
+#include "klist.h"
 
 #define TIMEOUT_BLOCKING_DEFAULT 5
 #define MINORS 128
@@ -46,5 +46,5 @@ typedef struct _device_state{
     int state;
     unsigned int thread_wait_high;
     unsigned int thread_wait_low;
-    kfifo* data_flow[2]; //devono essere due TODO 
+    klist* data_flow[2]; 
 } device_state;

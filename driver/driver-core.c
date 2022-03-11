@@ -215,9 +215,9 @@ int init_module(void){
         tmp.state = ENABLED; //default prority set to LOW
         tmp.thread_wait_high = 0;
         tmp.thread_wait_low = 0;
-        tmp.data_flow[HIGH_PR] = fifo_alloc();
+        tmp.data_flow[HIGH_PR] = klist_alloc();
         if(tmp.data_flow[HIGH_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
-        tmp.data_flow[LOW_PR] = fifo_alloc();
+        tmp.data_flow[LOW_PR] = klist_alloc();
         if(tmp.data_flow[LOW_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
     }
     //no error
@@ -235,8 +235,8 @@ int init_module(void){
     //error
     revert_alloc:
     for(;i>=0;i--){
-        fifo_free(devices[i].data_flow[HIGH_PR]);
-        fifo_free(devices[i].data_flow[LOW_PR]);
+        klist_free(devices[i].data_flow[HIGH_PR]);
+        klist_free(devices[i].data_flow[LOW_PR]);
 	}
 	return -ENOMEM;
 }
@@ -244,8 +244,8 @@ int init_module(void){
 void cleanup_module(void){
     int i;
 	for(i=0;i<MINORS;i++){
-		fifo_free(devices[i].data_flow[HIGH_PR]);
-        fifo_free(devices[i].data_flow[LOW_PR]);
+		klist_free(devices[i].data_flow[HIGH_PR]);
+        klist_free(devices[i].data_flow[LOW_PR]);
 	}
 
 	unregister_chrdev(Major, DEVICE_NAME);
