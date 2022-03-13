@@ -6,7 +6,7 @@
 #define EXPORT_SYMTAB
 
 
-#include "driver-core.h"
+#include "headers/driver-core.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Marco Calavaro");

@@ -7,11 +7,11 @@
 #include <linux/pid.h>		
 #include <linux/tty.h>
 #include <linux/version.h>
-#include <workqueue.h>
+#include <linux/workqueue.h>
 
-#include "headers/defines.h"
-#include "headers/klist.h"
-#include "headers/deferred-work.h"
+#include "defines.h"
+#include "klist.h"
+#include "deferred-work.h"
 
 
 enum priority {
