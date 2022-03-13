@@ -27,6 +27,19 @@ klist_elem* klist_elem_alloc(char* buffer,int size){
     return elem;
 }
 
+//This function is call only in already lock zone
+void remove_head(klist* list){
+    klist_elem* elem;
+    elem = list->head;
+    list->head = elem->next;
+    if (list->head == NULL)
+    {
+        list->tail = NULL;
+    }
+    klist_elem_free(elem);
+    return;
+}
+
 unsigned int klist_put(klist* list,char* buffer,unsigned int size){
     //create an list element 
     klist_elem* elem;
@@ -91,18 +104,7 @@ unsigned int klist_get(klist* list,char* buffer,unsigned int size){
 }
 
 
-//This function is call only in already lock zone
-void remove_head(klist* list){
-    klist_elem* elem;
-    elem = list->head;
-    list->head = elem->next;
-    if (list->head == NULL)
-    {
-        list->tail = NULL;
-    }
-    klist_elem_free(elem);
-    return;
-}
+
 
 unsigned int klist_len(klist* list){
     unsigned int len;
@@ -123,7 +125,7 @@ void klist_free(klist* list){
     if (klist_len(list)>0)
     {
         mutex_lock(&(list->op_mtx));
-        while (klist->head != NULL)
+        while (list->head != NULL)
         {
             remove_head(list);
         }

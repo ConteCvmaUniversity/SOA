@@ -1,5 +1,8 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
+
+#include "defines.h"
+
 /* klist metadata fifo rule */
 
 

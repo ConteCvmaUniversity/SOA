@@ -6,7 +6,7 @@
 #define EXPORT_SYMTAB
 
 
-#include "defines.h"
+#include "driver-core.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Marco Calavaro");
@@ -24,6 +24,7 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
 #define MODULE_NAME "project-module"
 static int Major; // Major number of driver
 device_state devices[MINORS]; // array that mantain state of all device
+struct workqueue_struct* queues[MINORS];
 #define DEVICE_NAME "project-dev"
 
 /**
@@ -99,22 +100,25 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     session = (session_state*) filp->private_data;
     device = devices[minor];
 
+    char* tmp = kmalloc(len,GFP_KERNEL);
+    if (!tmp)
+        return -1;
+    
+    ret = copy_from_user(tmp,buff,len);
+    if (ret != 0)
+    {
+        //some error 
+        kfree(tmp);
+        return -1; //TODO
+    }
+
+
     
     //check priority
     if (session->priority == HIGH_PR)
     {
+        ret = klist_put(device.data_flow[HIGH_PR],tmp,len);
         
-        char* tmp = kmalloc(len,GFP_KERNEL);
-        ret = copy_from_user(tmp,buff,len);
-        if (ret != 0)
-        {
-            //some error 
-            kfree(tmp);
-            return -1; //TODO
-        }
-        
-        ret = fifo_put(device.data_flow[HIGH_PR],tmp,len);
-        kfree(tmp);
     }else
     {
        //deferred work 
@@ -135,12 +139,13 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
     session_state* session;
     device_state device;
     unsigned int ret;
+    char* tmp;
 
     session = (session_state*) filp->private_data;
     device = devices[minor];
 
-    char* tmp = kmalloc(len,GFP_KERNEL);
-    ret = fifo_get(device.data_flow[session->priority],tmp,len);
+    tmp = kmalloc(len,GFP_KERNEL);
+    ret = klist_get(device.data_flow[session->priority],tmp,len);
     if (ret==0)
     {
         //no data todo
@@ -210,9 +215,12 @@ int init_module(void){
     //startup devices
     int i;
     device_state tmp;
+    
+
     for(i=0 ; i<MINORS ; i++){
+        queues[i] = create_workqueue("CODA: "+ itoa(i));
         tmp = devices[i];     
-        tmp.state = ENABLED; //default prority set to LOW
+        tmp.state = ENABLED; 
         tmp.thread_wait_high = 0;
         tmp.thread_wait_low = 0;
         tmp.data_flow[HIGH_PR] = klist_alloc();
@@ -235,6 +243,7 @@ int init_module(void){
     //error
     revert_alloc:
     for(;i>=0;i--){
+        destroy_workqueue(queues[i]);
         klist_free(devices[i].data_flow[HIGH_PR]);
         klist_free(devices[i].data_flow[LOW_PR]);
 	}
@@ -244,6 +253,7 @@ int init_module(void){
 void cleanup_module(void){
     int i;
 	for(i=0;i<MINORS;i++){
+        destroy_workqueue(queues[i]);
 		klist_free(devices[i].data_flow[HIGH_PR]);
         klist_free(devices[i].data_flow[LOW_PR]);
 	}
