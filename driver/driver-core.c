@@ -21,23 +21,14 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
 /**
  * Global module variable
 */
-#define MODULE_NAME "project-module"
+
 static int Major; // Major number of driver
 device_state devices[MINORS]; // array that mantain state of all device
 struct workqueue_struct* queues[MINORS];
-#define DEVICE_NAME "project-dev"
 
-/**
- * Global operation
-*/
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
-#define get_major(session)	MAJOR(session->f_inode->i_rdev)
-#define get_minor(session)	MINOR(session->f_inode->i_rdev)
-#else
-#define get_major(session)	MAJOR(session->f_dentry->d_inode->i_rdev)
-#define get_minor(session)	MINOR(session->f_dentry->d_inode->i_rdev)
-#endif
+
+
 
 /*Default session parameter*/
 void setup_session_state(session_state* state,unsigned int flags){
@@ -73,7 +64,7 @@ static int dev_open(struct inode *inode, struct file *file) {
     file->private_data = (void*) state; 
 
     
-
+    AUDIT
     printk(KERN_INFO "%s: device file successfully opened with minor %d\n",MODULE_NAME,minor);
     return 0;
     
@@ -86,6 +77,7 @@ static int dev_release(struct inode *inode, struct file *file) {
     //free private data file zone
     kfree(file->private_data);
 
+    AUDIT
     printk(KERN_INFO "%s: device file whit minor %d closed\n",MODULE_NAME,minor);
     return 0;
 
@@ -96,11 +88,12 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     session_state* session;
     device_state device;
     unsigned int ret;
+    char* tmp;
 
     session = (session_state*) filp->private_data;
     device = devices[minor];
 
-    char* tmp = kmalloc(len,GFP_KERNEL);
+    tmp = kmalloc(len,GFP_KERNEL);
     if (!tmp)
         return -1;
     
@@ -169,6 +162,7 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
     session_state* state;
     state = (session_state*) filp->private_data;
 
+    AUDIT
     printk(KERN_INFO "%s: call ioctl on device %d (minor number) and command %u\n",MODULE_NAME,minor,command);
 
     switch (command)
@@ -190,6 +184,7 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
         break;
 
     default:
+        AUDIT
         printk(KERN_INFO "%s: call ioctl whit unknow command on device %d (minor number)\n",MODULE_NAME,minor);
         break;
     }
@@ -215,10 +210,12 @@ int init_module(void){
     //startup devices
     int i;
     device_state tmp;
+    char s[4];
     
 
     for(i=0 ; i<MINORS ; i++){
-        queues[i] = create_workqueue("CODA: "+ itoa(i));
+        snprintf(s,4,"%d",i);
+        queues[i] = create_workqueue(s);
         tmp = devices[i];     
         tmp.state = ENABLED; 
         tmp.thread_wait_high = 0;

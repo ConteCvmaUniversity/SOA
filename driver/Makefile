@@ -1,5 +1,5 @@
 obj-m := project-driver.o
-project-driver-y := driver-core.o klist.o
+project-driver-y := driver-core.o klist.o deferred-work.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules 

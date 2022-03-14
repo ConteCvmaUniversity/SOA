@@ -14,12 +14,21 @@
 #include "deferred-work.h"
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
+#define get_major(session)	MAJOR(session->f_inode->i_rdev)
+#define get_minor(session)	MINOR(session->f_inode->i_rdev)
+#else
+#define get_major(session)	MAJOR(session->f_dentry->d_inode->i_rdev)
+#define get_minor(session)	MINOR(session->f_dentry->d_inode->i_rdev)
+#endif
+
+
 enum priority {
     HIGH_PR = 0,
     LOW_PR
 };
 
-#define DEFAULT_PR LOW_PR
+#define DEFAULT_PR HIGH_PR
 
 enum states{
     ENABLED = 0,
