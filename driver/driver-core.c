@@ -92,6 +92,7 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
 
     session = (session_state*) filp->private_data;
     device = devices[minor];
+    
 
     tmp = kmalloc(len,GFP_KERNEL);
     if (!tmp)
@@ -105,7 +106,8 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
         return -1; //TODO
     }
 
-
+    AUDIT
+    printk(KERN_INFO "%s: Call write on minor %d, priority %d\n",MODULE_NAME,minor,session->priority);
     
     //check priority
     if (session->priority == HIGH_PR)
@@ -137,15 +139,18 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
     session = (session_state*) filp->private_data;
     device = devices[minor];
 
+    AUDIT
+    printk(KERN_INFO "%s: Call read on minor %d, priority %d\n",MODULE_NAME,minor,session->priority);
+
     tmp = kmalloc(len,GFP_KERNEL);
     ret = klist_get(device.data_flow[session->priority],tmp,len);
     if (ret==0)
     {
-        //no data todo
+        //no data TODO
     }
-
-    ret = copy_to_user(buff,tmp,len);
-    if (ret != 0)
+    
+    
+    if (copy_to_user(buff,tmp,len) != 0)
     {
         //some error 
         kfree(tmp);
@@ -209,21 +214,21 @@ static struct file_operations fops = {
 int init_module(void){
     //startup devices
     int i;
-    device_state tmp;
+    device_state* tmp;
     char s[4];
     
 
     for(i=0 ; i<MINORS ; i++){
         snprintf(s,4,"%d",i);
         queues[i] = create_workqueue(s);
-        tmp = devices[i];     
-        tmp.state = ENABLED; 
-        tmp.thread_wait_high = 0;
-        tmp.thread_wait_low = 0;
-        tmp.data_flow[HIGH_PR] = klist_alloc();
-        if(tmp.data_flow[HIGH_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
-        tmp.data_flow[LOW_PR] = klist_alloc();
-        if(tmp.data_flow[LOW_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
+        tmp = &devices[i];     
+        tmp->state = ENABLED; 
+        tmp->thread_wait_high = 0;
+        tmp->thread_wait_low = 0;
+        tmp->data_flow[HIGH_PR] = klist_alloc();
+        if(tmp->data_flow[HIGH_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
+        tmp->data_flow[LOW_PR] = klist_alloc();
+        if(tmp->data_flow[LOW_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
     }
     //no error
     //dinamic major

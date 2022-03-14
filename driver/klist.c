@@ -11,7 +11,7 @@ klist* klist_alloc(void){
     list->tail = NULL;
     list->len = 0;
     mutex_init(&(list->op_mtx));
-
+    
     return list;
 }
 
@@ -24,6 +24,7 @@ klist_elem* klist_elem_alloc(char* buffer,int size){
     elem->next= NULL;
     elem->size = size;
     elem->buffer = buffer;
+
     return elem;
 }
 
@@ -44,10 +45,12 @@ unsigned int klist_put(klist* list,char* buffer,unsigned int size){
     //create an list element 
     klist_elem* elem;
     elem = klist_elem_alloc(buffer,size);
+    
     if (elem == NULL)
         return -ENOMEM;
     
     mutex_lock(&(list->op_mtx));
+    
 
     if (list->tail != NULL)
     {
@@ -58,6 +61,7 @@ unsigned int klist_put(klist* list,char* buffer,unsigned int size){
         //no element in list
         list->head = elem;
         list->tail = elem;
+        
     }
     
 
