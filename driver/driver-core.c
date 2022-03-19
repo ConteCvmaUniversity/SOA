@@ -87,13 +87,13 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     int minor = get_minor(filp);
     session_state* session;
     device_state device;
-    unsigned int ret;
+    int ret,byte;
     char* tmp;
 
     session = (session_state*) filp->private_data;
     device = devices[minor];
     
-
+    //Prepare buffer to get user data
     tmp = kmalloc(len,GFP_KERNEL);
     if (!tmp)
         return -1;
@@ -112,22 +112,30 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     //check priority
     if (session->priority == HIGH_PR)
     {
-        ret = klist_put(device.data_flow[HIGH_PR],tmp,len);
+        byte = klist_put(device.data_flow[HIGH_PR],tmp,len);
+        if (byte < 0)
+        {
+            //Kernel kmalloc no mem TODO blocking?
+        }
+        
         
     }else
     {
-       //deferred work 
-
-
+       //deferred work always add the buffer no need to reserve space
+        ret = deferred_put(tmp,len,minor,queues[minor]);
+        if (ret != 0)
+        {
+            printk("%s: Abort write on minor %d, priority LOW",MODULE_NAME,minor);
+            kfree(tmp);
+            return -1;
+        }   
+        byte = len;
     }
-    
-    
 
-
-
-
-    return ret;
+    return byte;
 }
+
+
 
 static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) {
     int minor = get_minor(filp);

@@ -41,7 +41,7 @@ void remove_head(klist* list){
     return;
 }
 
-unsigned int klist_put(klist* list,char* buffer,unsigned int size){
+int klist_put(klist* list,char* buffer,unsigned int size){
     //create an list element 
     klist_elem* elem;
     elem = klist_elem_alloc(buffer,size);
@@ -71,7 +71,7 @@ unsigned int klist_put(klist* list,char* buffer,unsigned int size){
     
 }
 
-unsigned int klist_get(klist* list,char* buffer,unsigned int size){
+int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
     unsigned int total, remaining,byte_to_read;
     

@@ -27,8 +27,8 @@ typedef struct _klist
 
 extern klist* klist_alloc(void);
 extern void klist_free(klist*);
-extern unsigned int klist_put(klist*,char*,unsigned int);
-extern unsigned int klist_get(klist*,char*,unsigned int);
+extern int klist_put(klist*,char*,unsigned int);
+extern int klist_get(klist*,char*,unsigned int);
 extern unsigned int klist_len(klist*);
 
 klist_elem* klist_elem_alloc(char*,int);
