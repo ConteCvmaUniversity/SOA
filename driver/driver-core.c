@@ -11,6 +11,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Marco Calavaro");
 
+
 static int dev_open(struct inode *, struct file *);
 static int dev_release(struct inode *, struct file *);
 static ssize_t dev_write(struct file *, const char *, size_t, loff_t *);
@@ -24,7 +25,7 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
 
 static int Major; // Major number of driver
 device_state devices[MINORS]; // array that mantain state of all device
-struct workqueue_struct* queues[MINORS];
+// TODO REMOVE struct workqueue_struct* queues[MINORS];
 
 
 
@@ -42,6 +43,7 @@ void setup_session_state(session_state* state,unsigned int flags){
     //set priority to default?
     state->priority = DEFAULT_PR;
     state->timer = TIMEOUT_BLOCKING_DEFAULT;
+    return;
 }
 
 /**
@@ -90,6 +92,8 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     int ret,byte;
     char* tmp;
 
+    if (len == 0) return 0;
+
     session = (session_state*) filp->private_data;
     device = devices[minor];
     
@@ -113,26 +117,24 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     if (session->priority == HIGH_PR)
     {
         byte = klist_put(device.data_flow[HIGH_PR],tmp,len);
-        if (byte < 0)
-        {
-            //Kernel kmalloc no mem TODO blocking?
-        }
+        if (byte < 0) goto abort;
         
         
     }else
     {
        //deferred work always add the buffer no need to reserve space
-        ret = deferred_put(tmp,len,minor,queues[minor]);
-        if (ret != 0)
-        {
-            printk("%s: Abort write on minor %d, priority LOW",MODULE_NAME,minor);
-            kfree(tmp);
-            return -1;
-        }   
+        ret = deferred_put(tmp,len,&device,device.wq);
+        if (ret != 0) goto abort;
         byte = len;
     }
 
     return byte;
+
+    abort:
+    printk("%s: Abort write on minor %d, priority %d",MODULE_NAME,minor,session->priority);
+    kfree(tmp);
+    return -1;
+
 }
 
 
@@ -143,6 +145,8 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
     device_state device;
     unsigned int ret;
     char* tmp;
+
+    if (len == 0) return 0;
 
     session = (session_state*) filp->private_data;
     device = devices[minor];
@@ -221,22 +225,25 @@ static struct file_operations fops = {
 
 int init_module(void){
     //startup devices
-    int i;
+    int i,j;
     device_state* tmp;
-    char s[4];
+    char s[WQ_STR_LEN];
     
 
     for(i=0 ; i<MINORS ; i++){
-        snprintf(s,4,"%d",i);
-        queues[i] = create_workqueue(s);
-        tmp = &devices[i];     
-        tmp->state = ENABLED; 
-        tmp->thread_wait_high = 0;
-        tmp->thread_wait_low = 0;
-        tmp->data_flow[HIGH_PR] = klist_alloc();
-        if(tmp->data_flow[HIGH_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
-        tmp->data_flow[LOW_PR] = klist_alloc();
-        if(tmp->data_flow[LOW_PR] == NULL ) goto revert_alloc; //if some error on get_free_page
+        tmp = &devices[i];
+        snprintf(s,WQ_STR_LEN,"%d",i);
+        tmp->wq = create_workqueue(s); // TODO DEPRECATED?
+        if (!tmp->wq) goto revert_alloc;  
+        tmp->state = ENABLED; //default
+
+        for (j = 0; j < PRIORITY_NUM; j++)
+        {
+            tmp->thread_wait[j] = 0;
+            tmp->data_flow[j] = klist_alloc();
+            if(tmp->data_flow[j] == NULL ) goto revert_alloc;
+        }
+        
     }
     //no error
     //dinamic major
@@ -253,7 +260,7 @@ int init_module(void){
     //error
     revert_alloc:
     for(;i>=0;i--){
-        destroy_workqueue(queues[i]);
+        destroy_workqueue(devices[i].wq);
         klist_free(devices[i].data_flow[HIGH_PR]);
         klist_free(devices[i].data_flow[LOW_PR]);
 	}
@@ -263,7 +270,7 @@ int init_module(void){
 void cleanup_module(void){
     int i;
 	for(i=0;i<MINORS;i++){
-        destroy_workqueue(queues[i]);
+        destroy_workqueue(devices[i].wq);
 		klist_free(devices[i].data_flow[HIGH_PR]);
         klist_free(devices[i].data_flow[LOW_PR]);
 	}

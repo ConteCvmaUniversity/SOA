@@ -76,6 +76,15 @@ int klist_get(klist* list,char* buffer,unsigned int size){
     unsigned int total, remaining,byte_to_read;
     
     mutex_lock(&(list->op_mtx));
+
+    
+    if (list->len == 0) {
+        //to speed up the response 
+        mutex_unlock(&(list->op_mtx));
+        return 0;
+    }
+    
+    
     total = min(list->len,size);  //because get can request more byte of those are in the struct
     remaining = 0;
     while (remaining != total)

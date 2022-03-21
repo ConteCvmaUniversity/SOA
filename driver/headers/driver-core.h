@@ -1,4 +1,4 @@
-#pragma once
+
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -13,7 +13,7 @@
 
 #include "defines.h"
 #include "klist.h"
-#include "deferred-work.h"
+
 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
@@ -24,6 +24,7 @@
 #define get_minor(session)	MINOR(session->f_dentry->d_inode->i_rdev)
 #endif
 
+#define WQ_STR_LEN 4
 
 enum priority {
     HIGH_PR = 0,
@@ -31,6 +32,7 @@ enum priority {
 };
 
 #define DEFAULT_PR HIGH_PR
+#define PRIORITY_NUM 2
 
 enum states{
     ENABLED = 0,
@@ -54,8 +56,23 @@ typedef struct _session_state{
 
 
 typedef struct _device_state{
-    int state;
-    unsigned int thread_wait_high;
-    unsigned int thread_wait_low;
-    klist* data_flow[2]; 
+    int state; //ENABLE OR
+    unsigned int thread_wait[PRIORITY_NUM];
+    klist* data_flow[PRIORITY_NUM];
+    struct workqueue_struct* wq; 
 } device_state;
+
+
+
+/**
+ * Deferred work structers
+*/
+typedef struct _packed_work{
+        char* buffer;
+        int len;
+        device_state* device;
+        struct work_struct the_work;
+} packed_work;
+
+extern int deferred_put(char*,int,device_state*,struct workqueue_struct *);
+extern void actual_work(unsigned long);

@@ -3,7 +3,7 @@
 
 #include <linux/errno.h>
 #include <linux/slab.h>
-#include <linux/module.h>
+
 
 
 #define AUDIT if(1)
