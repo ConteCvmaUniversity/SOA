@@ -15,9 +15,9 @@ klist* klist_alloc(void){
     return list;
 }
 
-klist_elem* klist_elem_alloc(char* buffer,int size){
+klist_elem* klist_elem_alloc(char* buffer,int size,gfp_t flags){
     klist_elem* elem;
-    elem = kmalloc(sizeof(klist),GFP_KERNEL);
+    elem = kmalloc(sizeof(klist),flags);
     if (!elem)
     	return NULL;
     elem->last_read = 0;
@@ -41,15 +41,26 @@ void remove_head(klist* list){
     return;
 }
 
-int klist_put(klist* list,char* buffer,unsigned int size){
+int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     //create an list element 
     klist_elem* elem;
-    elem = klist_elem_alloc(buffer,size);
+    
+    
+    elem = klist_elem_alloc(buffer,size,flags);
     
     if (elem == NULL)
         return -ENOMEM;
     
-    mutex_lock(&(list->op_mtx));
+    /*
+    if (block)
+    {
+        mutex_lock(&(list->op_mtx));
+    }else
+    {
+       if(!mutex_trylock(&(list->op_mtx)))
+            return -EAGAIN;
+    }
+    */
     
 
     if (list->tail != NULL)
@@ -66,22 +77,31 @@ int klist_put(klist* list,char* buffer,unsigned int size){
     
 
     list->len += size;
-    mutex_unlock(&(list->op_mtx));
+    //mutex_unlock(&(list->op_mtx));
     return size;
     
 }
 
+
+//TODO blocking and unblocking mode
 int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
     unsigned int total, remaining,byte_to_read;
     
-    mutex_lock(&(list->op_mtx));
+    /*
+    if (block)
+    {
+        mutex_lock(&(list->op_mtx));
+    }else
+    {
+       if(!mutex_trylock(&(list->op_mtx)))
+            return -EAGAIN;
+    }*/
 
-    
     if (list->len == 0) {
         //to speed up the response 
-        mutex_unlock(&(list->op_mtx));
-        return 0;
+        //mutex_unlock(&(list->op_mtx));
+        return -ENODATA;
     }
     
     
@@ -112,7 +132,7 @@ int klist_get(klist* list,char* buffer,unsigned int size){
         }
     }
     list->len -= total;
-    mutex_unlock(&(list->op_mtx));
+    //mutex_unlock(&(list->op_mtx));
     return total;
 }
 
@@ -120,11 +140,11 @@ int klist_get(klist* list,char* buffer,unsigned int size){
 
 
 unsigned int klist_len(klist* list){
-    unsigned int len;
-    mutex_lock(&(list->op_mtx));
-    len = list->len;
-    mutex_unlock(&(list->op_mtx));
-    return len;
+    //unsigned int len;
+    //mutex_lock(&(list->op_mtx));
+    //len = list->len;
+    //mutex_unlock(&(list->op_mtx));
+    return list->len;
 }
 
 void klist_elem_free(klist_elem* elem){

@@ -2,16 +2,22 @@
 
 void actual_work(unsigned long data){
     int byte;
-    device_state device;
+    device_state* device;
     packed_work* work;
+    
 
     work = (packed_work*) (container_of((void*)data,packed_work,the_work));    
-    device = *work->device;
+    device = work->device;
+    
+    mutex_lock(&(device->data_flow[LOW_PR]->op_mtx));
+    byte = klist_put(device->data_flow[LOW_PR],work->buffer,work->len,GFP_KERNEL);
+    mutex_unlock(&(device->data_flow[LOW_PR]->op_mtx));
+    wake_up_interruptible(&(device->waitq[LOW_PR]));
 
-    byte = klist_put(device.data_flow[LOW_PR],work->buffer,work->len);
+
     if (byte < 0)
     {
-        //Kernel kmalloc no mem 
+        //Kernel kmalloc no mem  TODO
     }
 
     kfree(work);

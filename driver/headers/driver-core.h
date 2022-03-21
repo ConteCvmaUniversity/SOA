@@ -24,7 +24,7 @@
 #define get_minor(session)	MINOR(session->f_dentry->d_inode->i_rdev)
 #endif
 
-#define WQ_STR_LEN 4
+#define WORKQ_STR_LEN 4
 
 enum priority {
     HIGH_PR = 0,
@@ -39,30 +39,58 @@ enum states{
     DISABLED
 };
 
-enum io_cmd {
-    SET_HIGH_PR = 0,
-    SET_LOW_PR,
-    SET_OP_BLOCK,
-    SET_OP_NONBLOCK,
-    SET_TIMER_ON_BLOCK
-};
+#define MAGIC_NUMBER 'p'//use in ioctl (best major fixed?)
+#define SET_HIGH_PR _IO(MAGIC_NUMBER,0x00)
+#define SET_LOW_PR _IO(MAGIC_NUMBER,0x01)
+#define SET_OP_BLOCK _IO(MAGIC_NUMBER,0x02)
+#define SET_OP_NONBLOCK _IO(MAGIC_NUMBER,0x03)
+#define SET_TIMEOUT_BLOCK _IOW(MAGIC_NUMBER,0x04,int32_t*)
 
 typedef struct _session_state{
     int priority;
     bool blocking;
     //TODO timer setup 
-    unsigned long timer;
+    unsigned long timeout;
 } session_state;
 
 
 typedef struct _device_state{
     int state; //ENABLE OR
-    unsigned int thread_wait[PRIORITY_NUM];
+    atomic_t thread_wait[PRIORITY_NUM];
     klist* data_flow[PRIORITY_NUM];
-    struct workqueue_struct* wq; 
+    wait_queue_head_t waitq[PRIORITY_NUM];
+    struct workqueue_struct* workq; //only for low priority
+
 } device_state;
 
+#define blocking_lock_mutex(block,mutex_pointer) \
+({ \
+    int r=0; \
+    if (block){\
+        mutex_lock(mutex_pointer);\
+    }else{\
+        if(!mutex_trylock(mutex_pointer))\
+            r = -EAGAIN;\
+    }\
+    r;\
+})
 
+/* Condition of wait event are:
+            1: mutex_trylock success
+            2: data on queue available
+    Attention if mutex_trylock success but no data available must unlock mutex
+*/
+#define get_wait_conditions(mutex_pointer,expression)\
+({ \
+    int r = false; \
+    if(mutex_trylock(mutex_pointer)){ \
+        if(expression) \
+            r = true; \
+        else \
+            mutex_unlock(mutex_pointer);\
+    } \
+    r; \
+})
 
 /**
  * Deferred work structers
