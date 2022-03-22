@@ -35,8 +35,8 @@ enum priority {
 #define PRIORITY_NUM 2
 
 enum states{
-    ENABLED = 0,
-    DISABLED
+    DISABLED = 0,
+    ENABLED     
 };
 
 #define MAGIC_NUMBER 'p'//use in ioctl (best major fixed?)
@@ -55,12 +55,10 @@ typedef struct _session_state{
 
 
 typedef struct _device_state{
-    int state; //ENABLE OR
     atomic_t thread_wait[PRIORITY_NUM];
     klist* data_flow[PRIORITY_NUM];
     wait_queue_head_t waitq[PRIORITY_NUM];
     struct workqueue_struct* workq; //only for low priority
-
 } device_state;
 
 #define blocking_lock_mutex(block,mutex_pointer) \

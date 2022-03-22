@@ -23,8 +23,14 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
  * Global module variable
 */
 
+
 static int Major; // Major number of driver
-device_state devices[MINORS]; // array that mantain state of all device
+static device_state devices[MINORS]; // array that mantain state of all device
+static int device_states[MINORS];
+module_param_array(device_states,int,NULL,0660);
+
+
+
 
 
 /*Default session parameter*/
@@ -51,8 +57,8 @@ static int dev_open(struct inode *inode, struct file *file) {
     if(minor >= MINORS){
         return -ENODEV;
     }
-    if (devices[minor].state == DISABLED)
-        return -DISABLED;
+    if (device_states[minor] == DISABLED)
+        return -ENODEV;
 
     state = kmalloc(sizeof(session_state),GFP_KERNEL);
     if (state == NULL)
@@ -267,7 +273,7 @@ int init_module(void){
         snprintf(s,WORKQ_STR_LEN,"%d",i);
         tmp->workq = create_workqueue(s); // TODO DEPRECATED?
         if (!tmp->workq) goto revert_alloc;  
-        tmp->state = ENABLED; //default
+        device_states[i] = ENABLED; //default
 
         for (j = 0; j < PRIORITY_NUM; j++)
         {

@@ -21,12 +21,14 @@ void actual_work(unsigned long data){
     }
 
     kfree(work);
+    module_put(THIS_MODULE);
     return;   
     
 }
 
 int deferred_put(char* buf,int len,device_state* device,struct workqueue_struct *queue){
     packed_work *task;
+    if(!try_module_get(THIS_MODULE)) return -ENODEV;
 
     task = kmalloc(sizeof(packed_work),GFP_KERNEL);
     if (!task)
