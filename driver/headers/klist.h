@@ -19,7 +19,7 @@ typedef struct _klist
     struct mutex op_mtx;
     klist_elem* head;
     klist_elem* tail;
-    unsigned int len;
+    unsigned long len;
 
 }klist;
 
@@ -29,7 +29,7 @@ extern klist* klist_alloc(void);
 extern void klist_free(klist*);
 extern int klist_put(klist*,char*,unsigned int,gfp_t);
 extern int klist_get(klist*,char*,unsigned int);
-extern unsigned int klist_len(klist*);
+extern unsigned long klist_len(klist*);
 
 klist_elem* klist_elem_alloc(char*,int,gfp_t);
 void klist_elem_free(klist_elem*);

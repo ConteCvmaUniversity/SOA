@@ -26,11 +26,26 @@ static long dev_ioctl(struct file *filp, unsigned int command, unsigned long par
 
 static int Major; // Major number of driver
 static device_state devices[MINORS]; // array that mantain state of all device
-static int device_states[MINORS];
-module_param_array(device_states,int,NULL,0660);
 
+static int devices_state[MINORS];
+module_param_array(devices_state,int,NULL,0660);
+MODULE_PARM_DESC(devices_state,"Expose devices state, DISABLED is 0 value");
 
+unsigned long waiting_threads_high[MINORS];
+module_param_array(waiting_threads_high,ulong,NULL,0440);
+MODULE_PARM_DESC(waiting_threads_high,"Counter of waiting threads on the devices [HIGH PRIORITY]");
 
+unsigned long waiting_threads_low[MINORS];
+module_param_array(waiting_threads_low,ulong,NULL,0440);
+MODULE_PARM_DESC(waiting_threads_low,"Counter of waiting threads on the devices [LOW PRIORITY]");
+
+unsigned long high_prio_data[MINORS];
+module_param_array(high_prio_data,ulong,NULL,0440);
+MODULE_PARM_DESC(high_prio_data,"Data counter on HIGH priority dataflow");
+
+unsigned long low_prio_data[MINORS];
+module_param_array(low_prio_data,ulong,NULL,0440);
+MODULE_PARM_DESC(low_prio_data,"Data counter on LOW priority dataflow");
 
 
 /*Default session parameter*/
@@ -57,7 +72,7 @@ static int dev_open(struct inode *inode, struct file *file) {
     if(minor >= MINORS){
         return -ENODEV;
     }
-    if (device_states[minor] == DISABLED)
+    if (devices_state[minor] == DISABLED)
         return -ENODEV;
 
     state = kmalloc(sizeof(session_state),GFP_KERNEL);
@@ -105,6 +120,8 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     if (!session->blocking) 
         flags |= GFP_ATOMIC;
     
+
+    
     //Prepare buffer to get user data
     tmp = kmalloc(len,flags);
     if (!tmp)
@@ -120,17 +137,25 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     if (session->priority == HIGH_PR)
     {
         ret = blocking_lock_mutex(session->blocking,&(device->data_flow[HIGH_PR]->op_mtx));
+        if(ret != 0) goto abort;
+        //TODO check len
 
-        if(ret != 0) goto abort;   
         byte = klist_put(device->data_flow[HIGH_PR],tmp,len,flags);
+        high_prio_data[minor] = klist_len(device->data_flow[HIGH_PR]);
         mutex_unlock(&(device->data_flow[HIGH_PR]->op_mtx));
         if (byte < 0) {ret = byte; goto abort;}
         wake_up_interruptible(&(device->waitq[HIGH_PR]));
 
     }else
     {
+        ret = blocking_lock_mutex(session->blocking,&(device->data_flow[HIGH_PR]->op_mtx));
+        if(ret != 0) goto abort;
+        //TODO check len 
+
+
        //deferred work always add the buffer no need to reserve space
         ret = deferred_put(tmp,len,device,device->workq);
+        mutex_unlock(&(device->data_flow[HIGH_PR]->op_mtx));
         if (ret != 0) {ret = -1; goto abort;}
         byte = len;
     }
@@ -164,7 +189,8 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
     printk(KERN_INFO "%s: Call read on minor %d, priority %d\n",MODULE_NAME,minor,session->priority);
 
 
-    //IF NOT BLOCKING
+    //SE NON BLOCCANTE
+
     /* devo eseguire klist_get non bloccante potrei ricevere -EAGAIN se il mutex non è disponibile 
     o 0 se non vi sono elementi in lista altrimenti leggo*/
     //SE BLOCCANTE
@@ -183,19 +209,33 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
             1: mutex_trylock success
             2: data on queue available
         */
-        atomic_inc(&device->thread_wait[session->priority]);
+        //atomic_inc(&device->thread_wait[session->priority]);
+        session->priority == HIGH_PR ? waiting_threads_high[minor] ++ : waiting_threads_low[minor] ++;
         ret = wait_event_interruptible_timeout(device->waitq[session->priority], 
                         get_wait_conditions(&device->data_flow[session->priority]->op_mtx,
                         klist_len(device->data_flow[session->priority])>0),
                         session->timeout * HZ);
-
-        atomic_inc(&device->thread_wait[session->priority]);
+        
+       session->priority == HIGH_PR ? waiting_threads_high[minor] -- : waiting_threads_low[minor] --;
+        //atomic_dec(&device->thread_wait[session->priority]);
         if (ret == 0) return -ETIME;
         if (ret == -ERESTARTSYS) return -EINTR;
     }    
 
     tmp = kmalloc(len,flags);
     ret = klist_get(device->data_flow[session->priority],tmp,len);
+
+
+    if (session->priority == HIGH_PR)
+    {
+        high_prio_data[minor] = klist_len(device->data_flow[session->priority]);
+    }else
+    {
+        low_prio_data[minor] = klist_len(device->data_flow[session->priority]);
+    }
+    
+    
+
     mutex_unlock(&(device->data_flow[session->priority]->op_mtx));
     if (ret<=0) goto exit_read;
     if (copy_to_user(buff,tmp,len) != 0) ret = -1;  
@@ -273,11 +313,11 @@ int init_module(void){
         snprintf(s,WORKQ_STR_LEN,"%d",i);
         tmp->workq = create_workqueue(s); // TODO DEPRECATED?
         if (!tmp->workq) goto revert_alloc;  
-        device_states[i] = ENABLED; //default
-
+        devices_state[i] = ENABLED; //default
+        tmp->id = i;
         for (j = 0; j < PRIORITY_NUM; j++)
         {
-            atomic_set(&tmp->thread_wait[j],0);
+            //atomic_set(&tmp->thread_wait[j],0);
             init_waitqueue_head(&(tmp->waitq[j]));
             tmp->data_flow[j] = klist_alloc();
             if(tmp->data_flow[j] == NULL ) goto revert_alloc;

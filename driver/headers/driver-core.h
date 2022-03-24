@@ -55,7 +55,8 @@ typedef struct _session_state{
 
 
 typedef struct _device_state{
-    atomic_t thread_wait[PRIORITY_NUM];
+    int id;
+    //atomic_t thread_wait[PRIORITY_NUM];
     klist* data_flow[PRIORITY_NUM];
     wait_queue_head_t waitq[PRIORITY_NUM];
     struct workqueue_struct* workq; //only for low priority
@@ -100,5 +101,6 @@ typedef struct _packed_work{
         struct work_struct the_work;
 } packed_work;
 
+extern unsigned long low_prio_data[MINORS];
 extern int deferred_put(char*,int,device_state*,struct workqueue_struct *);
 extern void actual_work(unsigned long);

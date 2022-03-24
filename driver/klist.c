@@ -50,18 +50,7 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     
     if (elem == NULL)
         return -ENOMEM;
-    
-    /*
-    if (block)
-    {
-        mutex_lock(&(list->op_mtx));
-    }else
-    {
-       if(!mutex_trylock(&(list->op_mtx)))
-            return -EAGAIN;
-    }
-    */
-    
+       
 
     if (list->tail != NULL)
     {
@@ -77,7 +66,7 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     
 
     list->len += size;
-    //mutex_unlock(&(list->op_mtx));
+
     return size;
     
 }
@@ -87,25 +76,13 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
 int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
     unsigned int total, remaining,byte_to_read;
-    
-    /*
-    if (block)
-    {
-        mutex_lock(&(list->op_mtx));
-    }else
-    {
-       if(!mutex_trylock(&(list->op_mtx)))
-            return -EAGAIN;
-    }*/
 
     if (list->len == 0) {
-        //to speed up the response 
-        //mutex_unlock(&(list->op_mtx));
         return -ENODATA;
     }
     
     
-    total = min(list->len,size);  //because get can request more byte of those are in the struct
+    total = min(list->len,(unsigned long)size);  //because get can request more byte of those are in the struct
     remaining = 0;
     while (remaining != total)
     {
@@ -139,7 +116,7 @@ int klist_get(klist* list,char* buffer,unsigned int size){
 
 
 
-unsigned int klist_len(klist* list){
+unsigned long klist_len(klist* list){
     //unsigned int len;
     //mutex_lock(&(list->op_mtx));
     //len = list->len;
