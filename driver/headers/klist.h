@@ -5,6 +5,7 @@
 
 /* klist metadata fifo rule */
 
+#define KLIST_MAX_SIZE 8 * PAGE_SIZE
 
 typedef struct _klist_elem{
     char* buffer;
@@ -20,11 +21,13 @@ typedef struct _klist
     klist_elem* head;
     klist_elem* tail;
     unsigned long len;
+    unsigned long reserved;
 
 }klist;
 
 /*Function*/
-
+extern bool reserve_space(klist*,unsigned long);
+extern void free_reserved_space(klist*,unsigned long);
 extern klist* klist_alloc(void);
 extern void klist_free(klist*);
 extern int klist_put(klist*,char*,unsigned int,gfp_t);

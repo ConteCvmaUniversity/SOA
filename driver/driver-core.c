@@ -138,8 +138,14 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     {
         ret = blocking_lock_mutex(session->blocking,&(device->data_flow[HIGH_PR]->op_mtx));
         if(ret != 0) goto abort;
-        //TODO check len
-
+        
+        if (reserve_space(device->data_flow[HIGH_PR],len) == false)
+        {
+            mutex_unlock(&(device->data_flow[HIGH_PR]->op_mtx));
+            ret = -ENOSPC;
+            goto abort;
+        }
+        
         byte = klist_put(device->data_flow[HIGH_PR],tmp,len,flags);
         high_prio_data[minor] = klist_len(device->data_flow[HIGH_PR]);
         mutex_unlock(&(device->data_flow[HIGH_PR]->op_mtx));
@@ -148,14 +154,18 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
 
     }else
     {
-        ret = blocking_lock_mutex(session->blocking,&(device->data_flow[HIGH_PR]->op_mtx));
+        ret = blocking_lock_mutex(session->blocking,&(device->data_flow[LOW_PR]->op_mtx));
         if(ret != 0) goto abort;
-        //TODO check len 
-
+        if (reserve_space(device->data_flow[LOW_PR],len) == false)
+        {
+            mutex_unlock(&(device->data_flow[LOW_PR]->op_mtx));
+            ret = -ENOSPC;
+            goto abort;
+        }
 
        //deferred work always add the buffer no need to reserve space
         ret = deferred_put(tmp,len,device,device->workq);
-        mutex_unlock(&(device->data_flow[HIGH_PR]->op_mtx));
+        mutex_unlock(&(device->data_flow[LOW_PR]->op_mtx));
         if (ret != 0) {ret = -1; goto abort;}
         byte = len;
     }
@@ -234,11 +244,12 @@ static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) 
         low_prio_data[minor] = klist_len(device->data_flow[session->priority]);
     }
     
-    
+    if (ret>0) free_reserved_space(device->data_flow[session->priority],ret);
 
     mutex_unlock(&(device->data_flow[session->priority]->op_mtx));
+    
     if (ret<=0) goto exit_read;
-    if (copy_to_user(buff,tmp,len) != 0) ret = -1;  
+    if (copy_to_user(buff,tmp,len) != 0) ret = -ENOMEM;  
     exit_read:
     kfree(tmp);
     return ret;

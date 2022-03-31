@@ -41,6 +41,25 @@ void remove_head(klist* list){
     return;
 }
 
+bool reserve_space(klist* list,unsigned long space){
+    unsigned long tmp;
+    tmp = list->reserved + space;
+    if (tmp > KLIST_MAX_SIZE)
+    {
+        return false;
+    } else
+    {
+        list->reserved = tmp;
+        return true;
+    } 
+}
+
+void free_reserved_space(klist* list,unsigned long space){
+    list->reserved -= space;
+    //TODO consistency check
+    return;
+}
+
 int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     //create an list element 
     klist_elem* elem;
@@ -72,7 +91,7 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
 }
 
 
-//TODO blocking and unblocking mode
+
 int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
     unsigned int total, remaining,byte_to_read;
