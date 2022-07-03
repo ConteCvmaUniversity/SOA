@@ -10,6 +10,7 @@ klist* klist_alloc(void){
     list->head = NULL;
     list->tail = NULL;
     list->len = 0;
+    list->reserved = 0;
     mutex_init(&(list->op_mtx));
     
     return list;
@@ -43,19 +44,25 @@ void remove_head(klist* list){
 
 bool reserve_space(klist* list,unsigned long space){
     unsigned long tmp;
+    bool ret;
+    mutex_lock(&(list->op_mtx));
     tmp = list->reserved + space;
     if (tmp > KLIST_MAX_SIZE)
     {
-        return false;
+        ret = false;
     } else
     {
         list->reserved = tmp;
-        return true;
+        ret = true;
     } 
+    mutex_unlock(&(list->op_mtx));
+    return ret;
 }
 
 void free_reserved_space(klist* list,unsigned long space){
+    mutex_lock(&(list->op_mtx));
     list->reserved -= space;
+    mutex_unlock(&(list->op_mtx));
     //TODO consistency check
     return;
 }
@@ -67,9 +74,11 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     
     elem = klist_elem_alloc(buffer,size,flags);
     
+    
     if (elem == NULL)
         return -ENOMEM;
        
+    mutex_lock(&(list->op_mtx));
 
     if (list->tail != NULL)
     {
@@ -85,6 +94,7 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     
 
     list->len += size;
+    mutex_unlock(&(list->op_mtx));
 
     return size;
     
@@ -100,6 +110,7 @@ int klist_get(klist* list,char* buffer,unsigned int size){
         return -ENODATA;
     }
     
+    mutex_lock(&(list->op_mtx));
     
     total = min(list->len,(unsigned long)size);  //because get can request more byte of those are in the struct
     remaining = 0;
@@ -128,7 +139,7 @@ int klist_get(klist* list,char* buffer,unsigned int size){
         }
     }
     list->len -= total;
-    //mutex_unlock(&(list->op_mtx));
+    mutex_unlock(&(list->op_mtx));
     return total;
 }
 
@@ -136,11 +147,11 @@ int klist_get(klist* list,char* buffer,unsigned int size){
 
 
 unsigned long klist_len(klist* list){
-    //unsigned int len;
-    //mutex_lock(&(list->op_mtx));
-    //len = list->len;
-    //mutex_unlock(&(list->op_mtx));
-    return list->len;
+    unsigned int len;
+    mutex_lock(&(list->op_mtx));
+    len = list->len;
+    mutex_unlock(&(list->op_mtx));
+    return len;
 }
 
 void klist_elem_free(klist_elem* elem){

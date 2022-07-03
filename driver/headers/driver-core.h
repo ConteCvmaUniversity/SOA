@@ -79,6 +79,7 @@ typedef struct _device_state{
             2: data on queue available
     Attention if mutex_trylock success but no data available must unlock mutex
 */
+/*
 #define get_wait_conditions(mutex_pointer,expression)\
 ({ \
     int r = false; \
@@ -90,6 +91,8 @@ typedef struct _device_state{
     } \
     r; \
 })
+*/
+
 
 /**
  * Deferred work structers
