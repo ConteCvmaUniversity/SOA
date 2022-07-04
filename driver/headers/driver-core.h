@@ -10,6 +10,7 @@
 #include <linux/tty.h>
 #include <linux/version.h>
 #include <linux/workqueue.h>
+#include <linux/ioctl.h>
 
 #include "defines.h"
 #include "klist.h"

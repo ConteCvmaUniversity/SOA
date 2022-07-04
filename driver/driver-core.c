@@ -73,7 +73,7 @@ static int dev_open(struct inode *inode, struct file *file) {
         return -ENODEV;
     }
     if (devices_state[minor] == DISABLED)
-        return -ENODEV;
+        return -ENODEV; //TODO CHANGE
 
     state = kmalloc(sizeof(session_state),GFP_KERNEL);
     if (state == NULL)
