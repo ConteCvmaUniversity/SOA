@@ -100,8 +100,6 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
     
 }
 
-
-
 int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
     unsigned int total, remaining,byte_to_read;
@@ -142,9 +140,6 @@ int klist_get(klist* list,char* buffer,unsigned int size){
     mutex_unlock(&(list->op_mtx));
     return total;
 }
-
-
-
 
 unsigned long klist_len(klist* list){
     unsigned int len;
