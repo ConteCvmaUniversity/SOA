@@ -120,8 +120,6 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     if (!session->blocking) 
         flags |= GFP_ATOMIC;
     
-
-    
     //Prepare buffer to get user data
     tmp = kmalloc(len,flags);
     if (!tmp)
@@ -180,8 +178,6 @@ static ssize_t dev_write(struct file *filp, const char *buff, size_t len, loff_t
     return ret;
 
 }
-
-
 
 static ssize_t dev_read(struct file *filp, char *buff, size_t len, loff_t *off) {
     int minor = get_minor(filp);
@@ -309,7 +305,6 @@ static struct file_operations fops = {
   .release = dev_release,
   .unlocked_ioctl = dev_ioctl
 };
-
 
 /**
  * Module operations

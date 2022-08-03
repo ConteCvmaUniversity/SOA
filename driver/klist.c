@@ -102,7 +102,7 @@ int klist_put(klist* list,char* buffer,unsigned int size,gfp_t flags){
 
 int klist_get(klist* list,char* buffer,unsigned int size){
     klist_elem* elem;
-    unsigned int total, remaining,byte_to_read;
+    unsigned int total, remaining,byte_to_read, actual_elem_size;
 
     if (list->len == 0) {
         return -ENODATA;
@@ -116,25 +116,30 @@ int klist_get(klist* list,char* buffer,unsigned int size){
     {
         elem = list->head;
         byte_to_read = total - remaining;
-        
-        if (byte_to_read < (elem->size-elem->last_read))
+        actual_elem_size = elem->size - elem->last_read ;
+
+        if (byte_to_read < (actual_elem_size))
         {
             //no del haed
-            memcpy(buffer+remaining, elem->buffer+elem->last_read ,byte_to_read);
+            memcpy(buffer+remaining, elem->buffer + elem->last_read ,byte_to_read);
             elem->last_read += byte_to_read;
-            remaining += byte_to_read; 
+            remaining += byte_to_read;
+
+            /*
             if (elem->last_read >= elem->size)
             {
                 remove_head(list);
             }
+            */
             
         }else
         {
             //read all elem->buffer and remove head
-            memcpy(buffer+remaining, elem->buffer ,elem->size);
+            memcpy(buffer+remaining, elem->buffer + elem->last_read , actual_elem_size );
             remove_head(list);
-            remaining += elem->size;
+            remaining += actual_elem_size;
         }
+
     }
     list->len -= total;
     mutex_unlock(&(list->op_mtx));
