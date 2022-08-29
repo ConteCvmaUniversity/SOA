@@ -365,7 +365,7 @@ void cleanup_module(void){
 
 	unregister_chrdev(Major, DEVICE_NAME);
 
-	printk(KERN_INFO "%s: new device unregistered, it was assigned major number %d\n",MODULE_NAME, Major);
+	printk(KERN_INFO "%s: device unregistered, it was assigned major number %d\n",MODULE_NAME, Major);
 
 	return;
 }

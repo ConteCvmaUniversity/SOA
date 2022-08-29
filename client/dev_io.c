@@ -25,7 +25,11 @@ typedef enum __command{
 }command;
 
 command get_cmd(char* conv){
-    char* tmp = tolower(conv);
+    char tmp[strlen(conv)];
+    for (int i = 0; conv[i] != '\0'; i++) {
+        tmp[i] = tolower(conv[i]);
+    }
+    
     if (strcmp("high",tmp) == 0)
     {
         return HIGH;
@@ -95,11 +99,11 @@ int main(int argc, char** argv){
         ioctl(fd, SET_LOW_PR); 
         break;
     case BLOCK:
-        printf("Cannot open device file...\n");
+        printf("Setting operation blocking to device %s\n",argv[1]);
         ioctl(fd, SET_OP_BLOCK); 
         break;
     case NONBLOCK:
-        printf("Cannot open device file...\n");
+        printf("Setting operation non blocking to device %s\n",argv[1]);
         ioctl(fd, SET_OP_NONBLOCK); 
         break;
     case TIMER:
