@@ -18,6 +18,7 @@
   - [4.4 Operazioni di init e clenup del modulo](#44-operazioni-di-init-e-clenup-del-modulo)
 - [5 Parametri kernel](#5-parametri-kernel)
 - [6 Test](#6-test)
+  - [6.1 Client code](#61-client-code)
 
 ## 1 Traccia del progetto
 ***Multi-flow device file***
@@ -258,3 +259,20 @@ Il progetto richiedeva che il modulo esportasse 5 parametri nel VFS nella direct
 Questi ultimi parametri hanno permessi di sola lettura. (0440)
 
 ## 6 Test
+
+Per poter testare i dispositivi è stato creato del codice client che permette di creare e interagire con i dispositivi.
+
+Nello specifico vi sono:
+> - Due script per la creazione e rimozione di dispositivi, rispettivamente `add_dev.sh` e `rm_dev.sh`.
+> - Codice c per interaggire con il dispositivo.
+
+### 6.1 Client code
+
+Per poter compilare il codice del client basterà utilizzare il comando `make all` che creerà il file `client`, tale script deve essere lanciato con i permessi di root e richiede come parametro il percorso del dispositivo.
+
+All'apertura viene mostrato un menù con 8 opzioni che permettono:
+
+> - Scrivere e leggere dal dispositivo.
+> - Cambiare la priorità del dispositivo.
+> - Cambiare la tipologia delle operazioni (Bloccante o non).
+> - Impostare un nuovo valore del timer

@@ -9,7 +9,7 @@ Per poter installare il driver bisogna posizionarsi nella cartella `/driver` e u
     make all
     sudo insmod project-driver.ko
 ```
-utilizzo poi `dmseg` per ottenere il Major number del driver, mi verrà restituito un messaggio del tipo:
+utilizzare poi `dmseg` per ottenere il Major number del driver, esso verrà restituito in un messaggio del tipo:
 
 ```
  project-module: new char device registered, it is assigned major number 236
@@ -32,6 +32,12 @@ Per poter utilizzare il client posizionarsi nella cartella `/client` e ottenere 
 ```sh
 ./rm_dev.sh
 ```
+- Per rimuovere tutti i dispositivi usare l'opzione `-a` dello script `rm_dev.sh` 
+
+```sh
+./rm_dev.sh -a
+```
+
 
 ### Script interattivo per utilizzare un dispositivo
 
@@ -41,4 +47,12 @@ Compilare il programma eseguendo `make all`, verrà creato l'eseguibile ***clien
 ./client /dev/[device name]
 ```
 
+**IMPORTANTE**: bisogna avere i permessi di root.
+
+### Script pulizia del client 
+
 utilizzare il comando `make clean per rimuovere i file`
+
+```sh
+make clean
+```

@@ -39,7 +39,7 @@ char* opt[] = {
     "4) Set low priority",
     "5) Set operation blocking",
     "6) Set operation non blocking",
-    "7) Set timeout",
+    "7) Set timer value",
     "8) Quit"
 };
 
