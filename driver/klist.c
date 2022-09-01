@@ -125,12 +125,7 @@ int klist_get(klist* list,char* buffer,unsigned int size){
             elem->last_read += byte_to_read;
             remaining += byte_to_read;
 
-            /*
-            if (elem->last_read >= elem->size)
-            {
-                remove_head(list);
-            }
-            */
+            
             
         }else
         {
